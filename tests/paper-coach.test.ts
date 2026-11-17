@@ -14,7 +14,7 @@ import {
   parseSectionHeadingLine,
 } from '../src/shared/section-matcher'
 import { PaperCoachStore } from '../src/server/state-store'
-import { registerBundledPaperSkills } from '../src/server/skills-provider'
+import { registerAgySkillsSync, registerBundledPaperSkills } from '../src/server/skills-provider'
 import { resolveOpenAiChatEndpoints } from '../src/server/translate'
 import { PaperCoachClientController, resolveHostHttpBaseUrl } from '../src/client/controller'
 import { apply as applyServerPlugin } from '../src/index'
@@ -531,6 +531,77 @@ describe('PaperCoachStore & bundled dual skills', () => {
       for (const d of disposers) d()
       await new Promise<void>(resolve => pluginHttp.close(() => resolve()))
       await new Promise<void>(resolve => upstream.close(() => resolve()))
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('auto-syncs bundled skills with live settings to AGY ~/.gemini/config/skills when present and cleans up safely', async () => {
+    const tmp = await mkdtemp(join(tmpdir(), 'paper-coach-agy-sync-'))
+    const storeDir = join(tmp, 'store')
+    const missingAgyDir = join(tmp, 'nonexistent-gemini-config')
+    const agyConfigDir = join(tmp, 'gemini-config')
+
+    try {
+      const store = new PaperCoachStore(storeDir)
+      await store.init()
+      await store.updateSettings({
+        archiveBackend: 'openviking',
+        preferLocalZotero: true,
+        researchFocusHint: '遥感变化检测与多时相特征对齐',
+      })
+
+      // 1. No-op when AGY config root does not exist (never pollute non-AGY users)
+      const noopCleanup = await registerAgySkillsSync(store, { agyConfigDir: missingAgyDir })
+      expect(existsSync(missingAgyDir)).toBe(false)
+      await noopCleanup()
+
+      // 2. Syncs both skills with frontmatter + sidebar/quote instructions + live settings when AGY config exists
+      const { mkdir } = await import('node:fs/promises')
+      await mkdir(agyConfigDir, { recursive: true })
+
+      // Pre-create a user-custom unmanaged skill in paper-reading-navigator to verify non-clobber protection
+      const customNavDir = join(agyConfigDir, 'skills', 'paper-reading-navigator')
+      await mkdir(customNavDir, { recursive: true })
+      const customNavFile = join(customNavDir, 'SKILL.md')
+      await writeFile(customNavFile, '---\nname: paper-reading-navigator\ndescription: user custom\n---\n# Custom\n', 'utf8')
+
+      const cleanupProtected = await registerAgySkillsSync(store, { agyConfigDir })
+      const preservedCustom = await readFile(customNavFile, 'utf8')
+      expect(preservedCustom).toContain('# Custom')
+      expect(preservedCustom).not.toContain('dsh-paper-coach:managed')
+
+      const coachFile = join(agyConfigDir, 'skills', 'coaching-paper-reading', 'SKILL.md')
+      expect(existsSync(coachFile)).toBe(true)
+      const coachInitial = await readFile(coachFile, 'utf8')
+      expect(coachInitial.startsWith('---\n')).toBe(true)
+      expect(coachInitial).toContain('name: coaching-paper-reading')
+      expect(coachInitial).toContain('# 论文原文定位引用 (Paper Excerpt)')
+      expect(coachInitial).toContain('paper-coach://loc')
+      expect(coachInitial).toContain('优先使用 OpenViking viking://~/resources/paper-reading/')
+      expect(coachInitial).toContain('优先核查本机 Zotero 文献库')
+      expect(coachInitial).toContain('遥感变化检测与多时相特征对齐')
+      expect(coachInitial).toContain('<!-- dsh-paper-coach:managed -->')
+
+      // 3. Live refresh when user updates settings
+      await store.updateSettings({
+        archiveBackend: 'local',
+        preferLocalZotero: false,
+        researchFocusHint: '双时相基础模型微调',
+      })
+      await new Promise(r => setTimeout(r, 50))
+      const coachUpdated = await readFile(coachFile, 'utf8')
+      expect(coachUpdated).toContain('强制使用本地工作区 .paper-reading/')
+      expect(coachUpdated).toContain('未强制要求预查本机 Zotero')
+      expect(coachUpdated).toContain('双时相基础模型微调')
+      expect(coachUpdated).not.toContain('遥感变化检测与多时相特征对齐')
+
+      // 4. Cleanup removes managed skill directory but never touches user-authored unmanaged skill
+      await cleanupProtected()
+      expect(existsSync(coachFile)).toBe(false)
+      expect(existsSync(customNavFile)).toBe(true)
+
+      store.dispose()
+    } finally {
       await rm(tmp, { recursive: true, force: true })
     }
   })

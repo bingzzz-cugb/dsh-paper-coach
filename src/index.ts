@@ -1,12 +1,17 @@
 import { createReadStream } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { pipeline } from 'node:stream/promises'
+import { homedir } from 'node:os'
 import { isAbsolute, resolve } from 'node:path'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { PaperCoachStore } from './server/state-store'
-import { registerBundledPaperSkills } from './server/skills-provider'
+import {
+  PAPER_COACH_SYSTEM_PROMPT_LINES,
+  registerAgySkillsSync,
+  registerBundledPaperSkills,
+} from './server/skills-provider'
 import { registerPaperCoachTools } from './server/tools'
 import { translateExcerpt } from './server/translate'
 
@@ -35,11 +40,41 @@ async function readJsonBody(req: IncomingMessage, maxBytes = 512 * 1024): Promis
   return raw.trim() ? JSON.parse(raw) : {}
 }
 
-export function apply(ctx: any, options?: { storeDir?: string }): void {
+export function apply(
+  ctx: any,
+  options?: { storeDir?: string; agyConfigDir?: string | false }
+): void {
   const store = new PaperCoachStore(options?.storeDir)
-  void store.init()
+  const initPromise = store.init()
 
-  ctx.effect(() => () => store.dispose())
+  const resolvedAgyConfigDir =
+    options?.agyConfigDir === false
+      ? undefined
+      : typeof options?.agyConfigDir === 'string'
+        ? options.agyConfigDir
+        : !options?.storeDir
+          ? join(homedir(), '.gemini', 'config')
+          : undefined
+
+  let agyDisposed = false
+  let cleanupAgy: (() => Promise<void>) | undefined
+  if (resolvedAgyConfigDir) {
+    void initPromise
+      .then(async () => {
+        if (agyDisposed) return
+        cleanupAgy = await registerAgySkillsSync(store, { agyConfigDir: resolvedAgyConfigDir })
+        if (agyDisposed && cleanupAgy) {
+          await cleanupAgy()
+        }
+      })
+      .catch(() => {})
+  }
+
+  ctx.effect(() => () => {
+    agyDisposed = true
+    void cleanupAgy?.()
+    store.dispose()
+  })
 
   if (typeof ctx.inject === 'function') {
     ctx.inject(['skills'], (sctx: any) => {
@@ -61,12 +96,7 @@ export function apply(ctx: any, options?: { storeDir?: string }): void {
       const off = sp.section({
         name: 'dsh-paper-coach',
         order,
-        text: [
-          '## Academic Paper Sidebar & Reading Panel (dsh-paper-coach)',
-          '- When starting or resuming close reading of a local cached PDF paper, call paper_reader_open to open it automatically in the right sidebar, and call paper_reading_plan to display agreed reading sections (e.g. §4.1, §5.2) and learning goals in the floating panel.',
-          '- When answering questions about a specific section or sentence of the open paper, call paper_reader_navigate to scroll the sidebar PDF to that section/page and highlight 1-3 key verbatim sentences, and include clickable location badges like [📍 §8 · p.9](paper-coach://loc?section=8&page=9&q=first%20few%20words) in your explanation.',
-          '- User messages starting with "# 论文原文定位引用 (Paper Excerpt)" come from the user selecting text directly inside the sidebar PDF reader with exact page and section coordinates.',
-        ].join('\n'),
+        text: PAPER_COACH_SYSTEM_PROMPT_LINES.join('\n'),
       })
       spCtx.effect(() => off)
     })

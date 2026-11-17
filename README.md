@@ -55,6 +55,12 @@ dsh plugin --profile desktop add ./dsh-paper-coach-0.1.0.tgz
 
 安装完成后重启 DSH Desktop（或刷新 Web 前端），即可在 **设置 → 论文粗读+精读伴读设置** 或侧边栏 PDF 阅读器右上角 `⚙` 按钮中配置翻译通道、API Key、路线面板默认位置与个人研究方向提示。
 
+### Antigravity (`dsh-agy-link`) 桥接线路兼容说明
+
+如果你在 DSH 中通过 `dsh-agy-link` 使用 Google Antigravity 线路：
+- **技能自动同步（零手动拷贝）**：插件启动及修改设置时，会自动检测本机是否存在 `~/.gemini/config`，并将携带最新面板配置与划词引用规则的内置双 Skill 自动同步至 `~/.gemini/config/skills/`（停用插件时自动清理，且不会覆盖你手写的非托管同名技能）；
+- **MCP 工具放行**：只需在 `dsh-agy-link` 开启 `mcpBridge` 并在 `mcpToolAllowlist` 中加入 `paper_reader_open,paper_reader_navigate,paper_reading_plan,paper_reader_status`，AGY 即可像原生 DSH 会话一样完整驱动右侧 PDF 阅读器与精读路线面板。
+
 ---
 
 ## 提供的 Agent 工具与内置技能
