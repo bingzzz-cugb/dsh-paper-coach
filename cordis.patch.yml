@@ -1,0 +1,4 @@
+# dsh-paper-coach bundle patch
+- insert:
+    - id: dsh-paper-coach
+      name: 'dsh-paper-coach'

@@ -1,0 +1,89 @@
+{
+  "name": "dsh-paper-coach",
+  "version": "0.1.0",
+  "description": "DSH 学术论文粗读导读 + 精读伴读全栈插件：内置双 Skill、侧边栏 PDF 双向定位与句子高亮、划词三通道翻译与精确位置引用胶囊、定向精读章节路线与学习目标浮动面板",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "paper-reading",
+    "pdf-reader",
+    "academic-research",
+    "skill"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bingzzz-cugb/dsh-paper-coach.git"
+  },
+  "homepage": "https://github.com/bingzzz-cugb/dsh-paper-coach#readme",
+  "bugs": {
+    "url": "https://github.com/bingzzz-cugb/dsh-paper-coach/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-api-session-controller"
+      ]
+    },
+    "manifestVersion": 1
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.0-0",
+    "@deepseek-ai/dsh-client-locale": ">=0.2.0-0",
+    "@deepseek-ai/dsh-client-ui-slots": ">=0.2.0-0",
+    "@deepseek-ai/dsh-client-ui-conversation": ">=0.2.0-0",
+    "@deepseek-ai/dsh-client-ui-input-trigger": ">=0.2.0-0",
+    "@deepseek-ai/dsh-api-session-controller": ">=0.2.0-0",
+    "dsh-better-sidebar": ">=0.28.0"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.0",
+    "pdfjs-dist": "4.10.38",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
