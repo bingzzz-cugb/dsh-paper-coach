@@ -1,6 +1,6 @@
 {
   "name": "dsh-paper-coach",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH 学术论文粗读导读 + 精读伴读全栈插件：内置双 Skill、侧边栏 PDF 双向定位与句子高亮、划词三通道翻译与精确位置引用胶囊、定向精读章节路线与学习目标浮动面板",
   "keywords": [
     "dsh",

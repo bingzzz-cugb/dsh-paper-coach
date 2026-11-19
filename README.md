@@ -50,7 +50,7 @@ dsh plugin --profile desktop add ./dsh-paper-coach
 ```bash
 cd dsh-paper-coach
 npm pack
-dsh plugin --profile desktop add ./dsh-paper-coach-0.1.0.tgz
+dsh plugin --profile desktop add ./dsh-paper-coach-0.1.1.tgz
 ```
 
 安装完成后重启 DSH Desktop（或刷新 Web 前端），即可在 **设置 → 论文粗读+精读伴读设置** 或侧边栏 PDF 阅读器右上角 `⚙` 按钮中配置翻译通道、API Key、路线面板默认位置与个人研究方向提示。

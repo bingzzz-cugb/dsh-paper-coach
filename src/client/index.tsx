@@ -4,7 +4,7 @@ import { en, NS, zh, type PaperCoachTranslate } from './locales'
 import { PAPER_COACH_CSS } from './styles'
 import { PaperPdfViewer } from './PaperPdfViewer'
 import { registerNativePdfViewer } from './native-pdf-viewer'
-import { PaperQuoteDock, createPaperUserQuoteNode, createPaperUserTextRule } from './PaperQuoteDock'
+import { PAPER_USER_TEXT_RULE_ID, PaperQuoteDock, createPaperUserQuoteNode, createPaperUserTextRule } from './PaperQuoteDock'
 import { RoadmapPanelContent } from './RoadmapPanel'
 import { SettingsForm, SettingsModalHost } from './SettingsView'
 
@@ -124,7 +124,12 @@ export function apply(ctx: any): void {
 
   const attachUserTextRule = (uiConv: any) => {
     if (uiConv?.userText && typeof uiConv.userText.register === 'function') {
-      return uiConv.userText.register(userTextRule)
+      try {
+        return uiConv.userText.register(userTextRule)
+      } catch (err) {
+        console.warn('[paper-coach] uiConversation.userText.register failed:', err)
+        return undefined
+      }
     }
     return undefined
   }
@@ -143,9 +148,10 @@ export function apply(ctx: any): void {
     slots.register(
       {
         name: 'conversation.user.text.node',
-        key: 'dsh-paper-coach-quote',
+        key: PAPER_USER_TEXT_RULE_ID,
         priority: 100,
         locale: NS,
+        inject: (sessionId: string) => ({ sessionId }),
       },
       UserQuoteNode as any
     )

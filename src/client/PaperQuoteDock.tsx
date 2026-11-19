@@ -126,17 +126,22 @@ export function PaperQuoteDock({
   )
 }
 
+export const PAPER_USER_TEXT_RULE_ID = 'dsh-paper-coach-quote'
+
 export interface PaperUserQuoteNodeData {
   quotes: PaperQuotePayload[]
 }
 
 export function createPaperUserTextRule() {
   return {
-    key: 'dsh-paper-coach-quote',
+    id: PAPER_USER_TEXT_RULE_ID,
+    key: PAPER_USER_TEXT_RULE_ID,
+    order: 20,
     match(text: string, from: number) {
       const parsed = parsePaperQuoteBlock(text, from)
       if (!parsed) return undefined
       return {
+        id: PAPER_USER_TEXT_RULE_ID,
         start: parsed.start,
         end: parsed.end,
         data: { quotes: parsed.quotes } as PaperUserQuoteNodeData,
@@ -147,8 +152,8 @@ export function createPaperUserTextRule() {
 
 export function createPaperUserQuoteNode(controller: PaperCoachClientController) {
   return function PaperUserQuoteNode(props: any): React.JSX.Element | null {
-    const data = props?.data as PaperUserQuoteNodeData | undefined
-    const sessionId = props?.session?.sessionId || controller.getActiveSession() || ''
+    const data = (props?.node?.data ?? props?.data) as PaperUserQuoteNodeData | undefined
+    const sessionId = props?.sessionId || props?.session?.sessionId || controller.getActiveSession() || ''
     if (!data?.quotes?.length) return null
     return (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
